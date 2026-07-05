@@ -1,0 +1,764 @@
+"use client";
+
+import React, { useMemo, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import {
+  Box,
+  Typography,
+  Button,
+  IconButton,
+  Drawer,
+  AppBar,
+  Toolbar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Chip,
+  Grid, 
+} from "@mui/material";
+import {
+  ArrowLeft,
+  Boxes,
+  Menu,
+  Package,
+  Pencil,
+  Plus,
+  Scissors,
+  ShoppingCart,
+  Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { type Product } from "../../products/types/types";
+import { ProductFormDialog, type ProductDraft } from "./ProductFormDialog";
+
+import {
+  products as seedProducts,
+  categoryName,
+} from "../../products/lib/products";
+
+const orders = [
+  {
+    id: "#1042",
+    customer: "Lucía Fernández",
+    items: 3,
+    total: 41.39,
+    status: "Enviado",
+  },
+  {
+    id: "#1041",
+    customer: "Marco Díaz",
+    items: 1,
+    total: 19.99,
+    status: "Pendiente",
+  },
+  {
+    id: "#1040",
+    customer: "Ana Torres",
+    items: 5,
+    total: 78.5,
+    status: "Entregado",
+  },
+  {
+    id: "#1039",
+    customer: "Pablo Ruiz",
+    items: 2,
+    total: 23.4,
+    status: "Pendiente",
+  },
+];
+
+const drawerWidth = 260;
+
+export function AdminPanel() {
+  const [view, setView] = useState<View>("productos");
+  const [items, setItems] = useState<Product[]>(seedProducts);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
+
+  const totalStock = useMemo(
+    () => items.reduce((sum, p) => sum + p.stock, 0),
+    [items],
+  );
+
+  const openCreate = () => {
+    setEditing(null);
+    setFormOpen(true);
+  };
+
+  const openEdit = (product: Product) => {
+    setEditing(product);
+    setFormOpen(true);
+  };
+
+  const remove = (product: Product) => {
+    setItems((prev) => prev.filter((p) => p.id !== product.id));
+    toast.success(`"${product.name}" eliminado correctamente`);
+  };
+
+  const save = (draft: ProductDraft, id?: string) => {
+    if (id) {
+      setItems((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...draft } : p)),
+      );
+      toast.success("Producto actualizado");
+    } else {
+      const newProduct: Product = {
+        id: `p${Date.now()}`,
+        ...draft,
+        images: draft.images.length ? draft.images : ["/placeholder.svg"],
+      };
+      setItems((prev) => [newProduct, ...prev]);
+      toast.success("Producto agregado exitosamente");
+    }
+  };
+
+  const SidebarContent = (
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
+        bgcolor: "background.paper",
+      }}
+    >
+      {/* Brand Logo */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          height: 64,
+          px: 3,
+          borderBottom: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Box
+          sx={{
+            display: "grid",
+            width: 32,
+            height: 32,
+            placeItems: "center",
+            borderRadius: 1.5,
+            bgcolor: "primary.main",
+            color: "primary.contrastText",
+          }}
+        >
+          <Scissors className="w-4 h-4" />
+        </Box>
+        <Typography
+          variant="subtitle1"
+          sx={{ fontWeight: "bold", letterSpacing: -0.5 }}
+        >
+          Verdicienta Admin
+        </Typography>
+      </Box>
+
+      {/* Navigation Buttons */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          p: 2,
+          display: "flex",
+          flexDirection: "column",
+          gap: 0.5,
+        }}
+      >
+        <NavButton
+          icon={Package}
+          label="Productos"
+          active={view === "productos"}
+          onClick={() => setView("productos")}
+        />
+        <NavButton
+          icon={ShoppingCart}
+          label="Órdenes"
+          active={view === "ordenes"}
+          onClick={() => setView("ordenes")}
+        />
+      </Box>
+
+      {/* Footer Return Action */}
+      <Box
+        component={Link}
+        href="/"
+        sx={{
+          mt: "auto",
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          px: 3,
+          py: 2.5,
+          borderTop: "1px solid",
+          borderColor: "divider",
+          textDecoration: "none",
+          color: "text.secondary",
+          "&:hover": { color: "text.primary", bgcolor: "action.hover" },
+          fontSize: "0.875rem",
+          fontWeight: 500,
+        }}
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Volver a la tienda
+      </Box>
+    </Box>
+  );
+
+  return (
+    <Box
+      sx={{ display: "flex", minHeight: "100vh", bgcolor: "rgba(0,0,0,0.02)" }}
+    >
+      {/* Sidebar para Escritorio (Desktop) */}
+      <Box
+        component="nav"
+        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
+      >
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: "none", md: "block" },
+            "& .MuiDrawer-paper": {
+              boxSizing: "border-box",
+              width: drawerWidth,
+              borderRight: "1px solid",
+              borderColor: "divider",
+            },
+          }}
+          open
+        >
+          {SidebarContent}
+        </Drawer>
+      </Box>
+
+      {/* Layout de Contenido Principal */}
+      <Box
+        sx={{
+          flexGrow: 1,
+          width: { md: `calc(100% - ${drawerWidth}px)` },
+          display: "flex",
+          flexDirection: "column",
+        }}
+      >
+        {/* Topbar Móvil / Acciones */}
+        <AppBar
+          position="sticky"
+          color="default"
+          sx={{
+            boxShadow: "none",
+            borderBottom: "1px solid",
+            borderColor: "divider",
+            bgcolor: "background.paper",
+          }}
+        >
+          <Toolbar
+            sx={{
+              px: { xs: 2, sm: 3 },
+              display: "flex",
+              justify: "space-between",
+              justifyContent: "space-between",
+            }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <IconButton
+                color="inherit"
+                aria-label="open drawer"
+                edge="start"
+                onClick={() => setMobileOpen(true)}
+                sx={{ mr: 1, display: { md: "none" } }}
+              >
+                <Menu className="w-5 h-5" />
+              </IconButton>
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: "bold", textTransform: "capitalize" }}
+              >
+                {view}
+              </Typography>
+            </Box>
+
+            <Button
+              component={Link}
+              href="/"
+              variant="outlined"
+              size="small"
+              sx={{
+                borderRadius: 2,
+                textTransform: "none",
+                display: { xs: "none", sm: "inline-flex" },
+              }}
+            >
+              Ver tienda
+            </Button>
+          </Toolbar>
+        </AppBar>
+
+        {/* Vistas Dinámicas */}
+        <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 4 } }}>
+          {view === "productos" ? (
+            <ProductsView
+              items={items}
+              totalStock={totalStock}
+              onCreate={openCreate}
+              onEdit={openEdit}
+              onRemove={remove}
+            />
+          ) : (
+            <OrdersView />
+          )}
+        </Box>
+      </Box>
+
+      {/* Drawer desplegable para Móviles */}
+      <Drawer
+        variant="temporary"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
+        sx={{
+          display: { xs: "block", md: "none" },
+          "& .MuiDrawer-paper": { boxSizing: "border-box", width: drawerWidth },
+        }}
+      >
+        {SidebarContent}
+      </Drawer>
+
+      {/* Formulario de producto */}
+      <ProductFormDialog
+        key={editing?.id || "new-product-form"}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        initial={editing}
+        onSave={save}
+      />
+    </Box>
+  );
+}
+
+/* ==========================================================================
+    COMPONENTES AUXILIARES INTERNOS REUTILIZABLES (MUI)
+   ========================================================================== */
+
+type View = "productos" | "ordenes";
+
+function NavButton({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      fullWidth
+      onClick={onClick}
+      variant={active ? "contained" : "text"}
+      color={active ? "primary" : "inherit"}
+      startIcon={<Icon className="w-4 h-4" />}
+      sx={{
+        justifyContent: "flex-start",
+        px: 2,
+        py: 1.2,
+        borderRadius: 2,
+        textTransform: "none",
+        fontSize: "0.875rem",
+        fontWeight: active ? 600 : 500,
+        color: active ? "primary.contrastText" : "text.secondary",
+        bgcolor: active ? "primary.main" : "transparent",
+        "&:hover": { bgcolor: active ? "primary.dark" : "action.hover" },
+      }}
+    >
+      {label}
+    </Button>
+  );
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  colorIntent,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  colorIntent: "primary" | "secondary" | "error";
+}) {
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2.5,
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+        borderRadius: 4,
+        borderColor: "divider",
+        bgcolor: "background.paper",
+      }}
+    >
+      <Box
+        sx={{
+          display: "grid",
+          width: 44,
+          height: 44,
+          placeItems: "center",
+          borderRadius: 2.5,
+          bgcolor: `${colorIntent}.light`,
+          color: `${colorIntent}.main`,
+          opacity: 0.95,
+        }}
+      >
+        <Icon className="w-5 h-5" />
+      </Box>
+      <Box>
+        <Typography
+          variant="caption"
+          color="text.secondary"
+          sx={{ fontWeight: 500 }}
+        >
+          {label}
+        </Typography>
+        <Typography variant="h6" sx={{ fontWeight: "bold", lineHeight: 1.2 }}>
+          {value}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+}
+
+function ProductsView({
+  items,
+  totalStock,
+  onCreate,
+  onEdit,
+  onRemove,
+}: {
+  items: Product[];
+  totalStock: number;
+  onCreate: () => void;
+  onEdit: (p: Product) => void;
+  onRemove: (p: Product) => void;
+}) {
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      {/* Tarjetas de Estadísticas */}
+      <Grid container spacing={3}>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard
+            icon={Package}
+            label="Productos"
+            value={String(items.length)}
+            colorIntent="primary"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard
+            icon={Boxes}
+            label="Unidades en Stock"
+            value={String(totalStock)}
+            colorIntent="secondary"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 4 }}>
+          <StatCard
+            icon={ShoppingCart}
+            label="Agotados"
+            value={String(items.filter((p) => p.stock === 0).length)}
+            colorIntent="error"
+          />
+        </Grid>
+      </Grid>
+
+      {/* Contenedor de la Tabla de Productos */}
+      <Paper
+        variant="outlined"
+        sx={{ borderRadius: 2, overflow: "hidden", borderColor: "divider" }}
+      >
+        <Box
+          sx={{
+            p: 2.5,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 2,
+            borderBottom: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+            Inventario de Manualidades
+          </Typography>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Plus className="w-4 h-4" />}
+            onClick={onCreate}
+            sx={{ borderRadius: 5, textTransform: "none", fontWeight: 600 }}
+          >
+            Agregar producto
+          </Button>
+        </Box>
+        <TableContainer>
+          <Table aria-label="tabla de productos">
+            <TableHead sx={{ bgcolor: "action.hover" }}>
+              <TableRow>
+                <TableCell>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    Producto
+                  </Typography>
+                </TableCell>
+                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    Categoría
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    Precio
+                  </Typography>
+                </TableCell>
+                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    Stock
+                  </Typography>
+                </TableCell>
+                <TableCell align="right">
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    sx={{ fontWeight: "bold" }}
+                  >
+                    Acciones
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {items.map((p) => (
+                <TableRow key={p.id} hover>
+                  <TableCell>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Box
+                        sx={{
+                          position: "relative",
+                          width: 40,
+                          height: 40,
+                          borderRadius: 2,
+                          overflow: "hidden",
+                          bgcolor: "action.hover",
+                          border: "1px solid",
+                          borderColor: "divider",
+                        }}
+                      >
+                        <Image
+                          src={p.images[0] || "/placeholder.svg"}
+                          alt={p.name}
+                          fill
+                          sizes="40px"
+                          className="object-cover"
+                        />
+                      </Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {p.name}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                    {/* ─── MEJORA 3: TRADUCCIÓN DE ID DE CATEGORÍA A NOMBRE VISUAL ─── */}
+                    {/* Reemplazamos '{p.category}' directo por la función 'categoryName(p.category)' para que renderice 'Tejidos' en lugar de 'tejidos' */}
+                    <Chip
+                      label={categoryName(p.category)}
+                      variant="outlined"
+                      size="small"
+                      sx={{ fontSize: "0.75rem", fontWeight: 500 }}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {/* ─── MEJORA 4: AJUSTE DE FORMATEO ECONÓMICO COP ──────────────── */}
+                      {/* Si la base viene en dólares/euros (e.g. 8.5), lo multiplicamos por un aproximado (e.g. 4200) para pesos, o lo dejas directo si ya es la moneda final */}
+                      {new Intl.NumberFormat("es-CO", {
+                        style: "currency",
+                        currency: "COP",
+                        maximumFractionDigits: 0,
+                      }).format(p.price * 4200)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                    {p.stock === 0 ? (
+                      <Chip
+                        label="Agotado"
+                        size="small"
+                        sx={{
+                          bgcolor: "error.light",
+                          color: "error.contrastText",
+                          fontWeight: "bold",
+                        }}
+                      />
+                    ) : (
+                      `${p.stock} uds`
+                    )}
+                  </TableCell>
+                  <TableCell align="right">
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        gap: 0.5,
+                      }}
+                    >
+                      <IconButton
+                        size="small"
+                        onClick={() => onEdit(p)}
+                        aria-label={`Editar ${p.name}`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => onRemove(p)}
+                        aria-label={`Eliminar ${p.name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Paper>
+    </Box>
+  );
+}
+
+function OrdersView() {
+  const statusColor: Record<string, "secondary" | "warning" | "success"> = {
+    Enviado: "secondary",
+    Pendiente: "warning",
+    Entregado: "success",
+  };
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{ borderRadius: 4, overflow: "hidden", borderColor: "divider" }}
+    >
+      <Box sx={{ p: 2.5, borderBottom: "1px solid", borderColor: "divider" }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+          Órdenes recientes
+        </Typography>
+      </Box>
+      <TableContainer>
+        <Table aria-label="tabla de ordenes">
+          <TableHead sx={{ bgcolor: "action.hover" }}>
+            <TableRow>
+              <TableCell>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Pedido
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Cliente
+                </Typography>
+              </TableCell>
+              <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Artículos
+                </Typography>
+              </TableCell>
+              <TableCell>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Total
+                </Typography>
+              </TableCell>
+              <TableCell align="right">
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ fontWeight: "bold" }}
+                >
+                  Estado
+                </Typography>
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {orders.map((o) => (
+              <TableRow key={o.id} hover>
+                <TableCell sx={{ fontWeight: 600 }}>{o.id}</TableCell>
+                <TableCell>
+                  <Typography variant="body2">{o.customer}</Typography>
+                </TableCell>
+                <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
+                  {o.items}
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  {/* ─── MEJORA 5: FORMATEO ECONÓMICO EN LA VISTA DE ÓRDENES ───────────── */}
+                  {new Intl.NumberFormat("es-CO", {
+                    style: "currency",
+                    currency: "COP",
+                    maximumFractionDigits: 0,
+                  }).format(o.total * 4200)}
+                </TableCell>
+                <TableCell align="right">
+                  <Chip
+                    label={o.status}
+                    color={statusColor[o.status]}
+                    size="small"
+                    sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                  />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Paper>
+  );
+}

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ProductController } from "../../../../backend/modules/products/controllers/productController";
-import { authGuard, roleGuard } from "@/src/backend/middlewares/authGuard";
+import { AuthController } from "../../../../backend/modules/auth/controllers/authController";
+import { authGuard, roleGuard } from "../../../../backend/middlewares/authGuard";
 
-const controller = new ProductController();
+const authController = new AuthController();
 
 type RouteParams = {
   params: Promise<{ id: string }>;
 };
 
-// Manejador para actualizar un producto (PUT)
+// PUT /api/users/[id] -> Actualiza campos (nombre, correo, rol, isActive)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const authResult = await authGuard(request);
 
@@ -22,10 +22,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  return controller.updateProduct(request, id);
+  return authController.updateUser(request, id);
 }
 
-// Manejador para deshabilitar un producto (DELETE)
+// DELETE /api/users/[id] -> Borrado lógico (Deshabilita colocando isActive: false)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const authResult = await authGuard(request);
 
@@ -39,5 +39,5 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  return controller.deleteProduct(id);
+  return authController.toggleUserStatus(id, false);
 }

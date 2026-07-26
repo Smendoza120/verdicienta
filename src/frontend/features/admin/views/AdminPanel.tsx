@@ -191,49 +191,70 @@ export function AdminPanel() {
 
       {/* Footer Return Action */}
       <Box
-        component={Link}
-        href="/"
         sx={{
           mt: "auto",
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          px: 3,
-          py: 2.5,
           borderTop: "1px solid",
           borderColor: "divider",
-          textDecoration: "none",
-          color: "text.secondary",
-          "&:hover": { color: "text.primary", bgcolor: "action.hover" },
-          fontSize: "0.875rem",
-          fontWeight: 500,
         }}
       >
-        <ArrowLeft className="w-4 h-4" />
-        Volver a la tienda
-      </Box>
+        {/* Info usuario opcional */}
+        {user && (
+          <Box sx={{ px: 3, pt: 2, pb: 1 }}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", fontWeight: 500 }}
+            >
+              Administrador
+            </Typography>
+            <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+              {user.name || user.email}
+            </Typography>
+          </Box>
+        )}
 
-      <Box
-        component="button"
-        onClick={() => logout()}
-        sx={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: 1.5,
-          px: 3,
-          py: 2,
-          border: "none",
-          bgcolor: "transparent",
-          cursor: "pointer",
-          color: "error.main",
-          "&:hover": { bgcolor: "action.hover" },
-          fontSize: "0.875rem",
-          fontWeight: 600,
-        }}
-      >
-        <LogOut className="w-4 h-4" />
-        Cerrar Sesión
+        <Box
+          component={Link}
+          href="/"
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            px: 3,
+            py: 1.5,
+            textDecoration: "none",
+            color: "text.secondary",
+            "&:hover": { color: "text.primary", bgcolor: "action.hover" },
+            fontSize: "0.875rem",
+            fontWeight: 500,
+          }}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Volver a la tienda
+        </Box>
+
+        <Box
+          component="button"
+          onClick={() => logout()}
+          sx={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            gap: 1.5,
+            px: 3,
+            py: 2,
+            border: "none",
+            bgcolor: "transparent",
+            cursor: "pointer",
+            color: "error.main",
+            "&:hover": { bgcolor: "action.hover" },
+            fontSize: "0.875rem",
+            fontWeight: 600,
+          }}
+        >
+          <LogOut className="w-4 h-4" />
+          Cerrar Sesión
+        </Box>
       </Box>
     </Box>
   );

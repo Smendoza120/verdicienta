@@ -16,7 +16,8 @@ import {
   ListItemButton,
   ListItemText,
 } from "@mui/material";
-import { Menu, Scissors, Search, ShoppingBag } from "lucide-react";
+import { LogIn, LogOut, Menu, Scissors, Search, ShoppingBag } from "lucide-react";
+import { useAuth } from "../../auth/context/AuthContext";
 
 const categories = [
   { id: "lanas", name: "Lanas y Hilados" },
@@ -39,6 +40,7 @@ export function StoreHeader({
   onOpenCart,
 }: StoreHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { user, isAuthenticated, logout } = useAuth(); // Assuming you have a useAuth hook to get user info and auth status
   const count = 0; // Mock temporal del contador
 
   const SearchField = (
@@ -170,19 +172,56 @@ export function StoreHeader({
 
         {/* Acciones del Header */}
         <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Button
-            component={Link}
-            href="/admin"
-            variant="outlined"
-            size="small"
-            sx={{
-              borderRadius: 5,
-              textTransform: "none",
-              display: { xs: "none", sm: "inline-flex" },
-            }}
-          >
-            Panel Admin
-          </Button>
+          {isAuthenticated ? (
+            <>
+              {user?.role === "Administrador" && (
+                <Button
+                  component={Link}
+                  href="/admin"
+                  variant="outlined"
+                  size="small"
+                  sx={{
+                    borderRadius: 5,
+                    textTransform: "none",
+                    display: { xs: "none", sm: "inline-flex" },
+                  }}
+                >
+                  Panel Admin
+                </Button>
+              )}
+
+              <Button
+                variant="text"
+                size="small"
+                color="inherit"
+                onClick={() => logout()}
+                startIcon={<LogOut className="w-4 h-4" />}
+                sx={{
+                  borderRadius: 5,
+                  textTransform: "none",
+                  display: { xs: "none", sm: "inline-flex" },
+                }}
+              >
+                Cerrar Sesión
+              </Button>
+            </>
+          ) : (
+            <Button
+              component={Link}
+              href="/login"
+              variant="contained"
+              size="small"
+              startIcon={<LogIn className="w-4 h-4" />}
+              sx={{
+                borderRadius: 5,
+                textTransform: "none",
+                fontWeight: "bold",
+                display: { xs: "none", sm: "inline-flex" },
+              }}
+            >
+              Iniciar Sesión
+            </Button>
+          )}
 
           <IconButton
             onClick={onOpenCart}

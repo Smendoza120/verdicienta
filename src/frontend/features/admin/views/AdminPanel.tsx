@@ -19,11 +19,12 @@ import {
   TableRow,
   Paper,
   Chip,
-  Grid, 
+  Grid,
 } from "@mui/material";
 import {
   ArrowLeft,
   Boxes,
+  LogOut,
   Menu,
   Package,
   Pencil,
@@ -33,6 +34,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useAuth } from "../../../features/auth/context/AuthContext";
 import { type Product } from "../../products/types/types";
 import { ProductFormDialog, type ProductDraft } from "./ProductFormDialog";
 
@@ -81,6 +83,8 @@ export function AdminPanel() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
+  const { logout, user } = useAuth();
+
   const totalStock = useMemo(
     () => items.reduce((sum, p) => sum + p.stock, 0),
     [items],
@@ -113,6 +117,7 @@ export function AdminPanel() {
         ...draft,
         images: draft.images.length ? draft.images : ["/placeholder.svg"],
       };
+
       setItems((prev) => [newProduct, ...prev]);
       toast.success("Producto agregado exitosamente");
     }
@@ -207,6 +212,29 @@ export function AdminPanel() {
         <ArrowLeft className="w-4 h-4" />
         Volver a la tienda
       </Box>
+
+      <Box
+        component="button"
+        onClick={() => logout()}
+        sx={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          px: 3,
+          py: 2,
+          border: "none",
+          bgcolor: "transparent",
+          cursor: "pointer",
+          color: "error.main",
+          "&:hover": { bgcolor: "action.hover" },
+          fontSize: "0.875rem",
+          fontWeight: 600,
+        }}
+      >
+        <LogOut className="w-4 h-4" />
+        Cerrar Sesión
+      </Box>
     </Box>
   );
 
@@ -260,7 +288,6 @@ export function AdminPanel() {
             sx={{
               px: { xs: 2, sm: 3 },
               display: "flex",
-              justify: "space-between",
               justifyContent: "space-between",
             }}
           >
@@ -274,6 +301,7 @@ export function AdminPanel() {
               >
                 <Menu className="w-5 h-5" />
               </IconButton>
+
               <Typography
                 variant="subtitle1"
                 sx={{ fontWeight: "bold", textTransform: "capitalize" }}
@@ -282,19 +310,37 @@ export function AdminPanel() {
               </Typography>
             </Box>
 
-            <Button
-              component={Link}
-              href="/"
-              variant="outlined"
-              size="small"
-              sx={{
-                borderRadius: 2,
-                textTransform: "none",
-                display: { xs: "none", sm: "inline-flex" },
-              }}
-            >
-              Ver tienda
-            </Button>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Button
+                component={Link}
+                href="/"
+                variant="outlined"
+                size="small"
+                sx={{
+                  borderRadius: 2,
+                  textTransform: "none",
+                  display: { xs: "none", sm: "inline-flex" },
+                }}
+              >
+                Ver tienda
+              </Button>
+
+              <Button
+                variant="text"
+                color="error"
+                size="small"
+                onClick={() => logout()}
+                startIcon={<LogOut className="w-4 h-4" />}
+                sx={{
+                  borderRadius: 2,
+                  textTransform: "none",
+                  fontWeight: 600,
+                  display: { xs: "none", sm: "inline-flex" },
+                }}
+              >
+                Cerrar Sesión
+              </Button>
+            </Box>
           </Toolbar>
         </AppBar>
 

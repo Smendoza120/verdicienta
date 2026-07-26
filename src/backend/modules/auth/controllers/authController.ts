@@ -8,19 +8,33 @@ export class AuthController {
     this.authService = new AuthService();
   }
 
+  // Opciones estándar para la cookie segura
+  private getCookieOptions() {
+    return {
+      httpOnly: true, // 🔒 Inaccesible para JavaScript / Protección XSS
+      secure: process.env.NODE_ENV === "production", // HTTPS en producción
+      sameSite: "lax" as const, // 🔒 Protección contra CSRF
+      path: "/",
+      maxAge: 24 * 60 * 60, // 1 día en segundos
+    };
+  }
+
   async register(request: NextRequest) {
     try {
       const body = await request.json();
       const result = await this.authService.register(body);
 
-      return NextResponse.json(
+      const response = NextResponse.json(
         {
           success: true,
-          message: "Usuario registrado con éxito.",
           data: result,
         },
         { status: 201 }
       );
+
+      response.cookies.set("verdicienta_token", result.token, this.getCookieOptions());
+
+      return response;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Error al registrar el usuario.";
       return NextResponse.json(
@@ -38,14 +52,14 @@ export class AuthController {
       const body = await request.json();
       const result = await this.authService.login(body);
 
-      return NextResponse.json(
-        {
-          success: true,
-          message: "Inicio de sesión exitoso.",
-          data: result,
-        },
-        { status: 200 }
-      );
+      const response = NextResponse.json({
+        success: true,
+        data: result,
+      });
+
+      response.cookies.set("verdicienta_token", result.token, this.getCookieOptions());
+
+      return response;
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Error al iniciar sesión.";
       return NextResponse.json(
@@ -56,6 +70,21 @@ export class AuthController {
         { status: 401 }
       );
     }
+  }
+
+  async logout() {
+    const response = NextResponse.json({
+      success: true,
+      message: "Sesión cerrada correctamente.",
+    });
+
+    // Eliminamos la cookie 
+    response.cookies.set("verdicienta_token", "", {
+      ...this.getCookieOptions(),
+      maxAge: 0,
+    });
+
+    return response;
   }
 
   async getUsers(request: NextRequest) {

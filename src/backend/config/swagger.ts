@@ -24,17 +24,29 @@ const options: swaggerJSDoc.Options = {
         description: "Gestión del catálogo artesanal, precios, stock y categorías.",
       },
     ],
-    // Configuración del esquema de seguridad JWT para Swagger UI
+    // Configuración de los esquemas de seguridad (Cookie HttpOnly + Bearer)
     components: {
       securitySchemes: {
+        cookieAuth: {
+          type: "apiKey",
+          in: "cookie",
+          name: "verdicienta_token",
+          description:
+            "Cookie HttpOnly emitida automáticamente tras iniciar sesión en `/api/auth/login`.",
+        },
         bearerAuth: {
           type: "http",
           scheme: "bearer",
           bearerFormat: "JWT",
-          description: "Ingresa el token JWT obtenido en el inicio de sesión (`/api/auth/login`).",
+          description:
+            "Fallback para clientes externos (Postman/Mobile). Token JWT enviado en el header `Authorization: Bearer <token>`.",
         },
       },
     },
+    security: [
+      { cookieAuth: [] },
+      { bearerAuth: [] },
+    ],
     // Definimos las operaciones directamente aquí como un objeto tipado seguro
     paths: {
       // ---------------- AUTH ENDPOINTS ----------------
@@ -89,6 +101,70 @@ const options: swaggerJSDoc.Options = {
           responses: {
             200: { description: "Inicio de sesión exitoso con token de acceso emitido." },
             401: { description: "Credenciales inválidas." },
+          },
+        },
+      },
+      "/api/auth/me": {
+        get: {
+          tags: ["Autenticación & Usuarios"],
+          summary: "Obtener datos del usuario autenticado (Sesión Activa)",
+          description:
+            "Retorna la información del usuario logueado validando la cookie HttpOnly o el header Bearer. Utilizado por el frontend para persistir la sesión al recargar la página.",
+          security: [{ cookieAuth: [] }, { bearerAuth: [] }],
+          responses: {
+            200: {
+              description: "Datos del usuario obtenidos correctamente.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean", example: true },
+                      data: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string", example: "64a7b1c2..." },
+                          name: { type: "string", example: "Laura Gómez" },
+                          email: { type: "string", example: "laura@verdicienta.com" },
+                          role: { type: "string", example: "Administrador" },
+                          isActive: { type: "boolean", example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            401: {
+              description: "No autorizado. La cookie no existe o el token expiró.",
+            },
+          },
+        },
+      },
+      "/api/auth/logout": {
+        post: {
+          tags: ["Autenticación & Usuarios"],
+          summary: "Cerrar sesión de usuario",
+          description:
+            "Limpia la cookie HttpOnly `verdicienta_token` ajustando su expiración a 0.",
+          responses: {
+            200: {
+              description: "Sesión cerrada con éxito y cookie removida.",
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      success: { type: "boolean", example: true },
+                      message: {
+                        type: "string",
+                        example: "Sesión cerrada correctamente.",
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         },
       },

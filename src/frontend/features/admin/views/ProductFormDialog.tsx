@@ -15,8 +15,6 @@ import {
   MenuItem,
 } from "@mui/material";
 import { ImagePlus, X } from "lucide-react";
-
-// Importación de tus tipos y catálogo de la tienda
 import { categories } from "../../products/lib/products";
 
 export type ProductDraft = {
@@ -71,17 +69,31 @@ export function ProductFormDialog({
     }
     return empty;
   });
-
   const fileRef = useRef<HTMLInputElement>(null);
 
   const onFiles = (files: FileList | null) => {
-    if (!files) return;
+    if (!files || files.length === 0) return;
     const urls = Array.from(files).map((f) => URL.createObjectURL(f));
     setDraft((d) => ({ ...d, images: [...d.images, ...urls] }));
+
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
   };
 
-  const removeImage = (idx: number) =>
-    setDraft((d) => ({ ...d, images: d.images.filter((_, i) => i !== idx) }));
+  const removeImage = (idx: number) => {
+    setDraft((d) => {
+      const target = d.images[idx];
+      if (target?.startsWith("blob:")) {
+        URL.revokeObjectURL(target);
+      }
+      return { ...d, images: d.images.filter((_, i) => i !== idx) };
+    });
+  };
+
+  const handleClose = () => {
+    onOpenChange(false);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +104,7 @@ export function ProductFormDialog({
   return (
     <Dialog
       open={open}
-      onClose={() => onOpenChange(false)}
+      onClose={handleClose}
       fullWidth
       maxWidth="sm"
       aria-labelledby="form-dialog-title"
@@ -123,8 +135,8 @@ export function ProductFormDialog({
             display: "flex",
             flexDirection: "column",
             gap: 2.5,
-            maxHeight: "65vh", // Corregido: maxHeigh -> maxHeight
-            border: "none", // Corregido: borderSide -> border
+            maxHeight: "65vh",
+            border: "none", 
           }}
         >
           {/* Input: Nombre */}
@@ -214,7 +226,7 @@ export function ProductFormDialog({
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
               {draft.images.map((img, i) => (
                 <Box
-                  key={i}
+                  key={`${img}-${i}`}
                   sx={{
                     position: "relative",
                     width: 80,
@@ -288,7 +300,7 @@ export function ProductFormDialog({
                 type="file"
                 accept="image/*"
                 multiple
-                className="hidden"
+                style={{ display: "none" }}
                 onChange={(e) => onFiles(e.target.files)}
               />
             </Box>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -20,6 +20,7 @@ import {
   Paper,
   Chip,
   Grid,
+  CircularProgress,
 } from "@mui/material";
 import {
   ArrowLeft,
@@ -37,11 +38,8 @@ import { toast } from "sonner";
 import { useAuth } from "../../../features/auth/context/AuthContext";
 import { type Product } from "../../products/types/types";
 import { ProductFormDialog, type ProductDraft } from "./ProductFormDialog";
-
-import {
-  products as seedProducts,
-  categoryName,
-} from "../../products/lib/products";
+import { categoryName } from "../../products/lib/products";
+import { productService } from "../../products/services/product.service";
 
 const orders = [
   {
@@ -78,12 +76,54 @@ const drawerWidth = 260;
 
 export function AdminPanel() {
   const [view, setView] = useState<View>("productos");
-  const [items, setItems] = useState<Product[]>(seedProducts);
+  const [items, setItems] = useState<Product[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
   const { logout, user } = useAuth();
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await productService.getAllProducts(false);
+      setItems(data);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Error al cargar inventario";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadData() {
+      try {
+        const data = await productService.getAllProducts(false);
+        if (isMounted) {
+          setItems(data);
+        }
+      } catch (error: unknown) {
+        if (isMounted) {
+          const msg = error instanceof Error ? error.message : "Error al cargar inventario";
+          toast.error(msg);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      isMounted = false; // Evita fugas de memoria si el componente se desmonta antes de terminar la petición
+    };
+  }, []);
 
   const totalStock = useMemo(
     () => items.reduce((sum, p) => sum + p.stock, 0),
@@ -100,26 +140,31 @@ export function AdminPanel() {
     setFormOpen(true);
   };
 
-  const remove = (product: Product) => {
-    setItems((prev) => prev.filter((p) => p.id !== product.id));
-    toast.success(`"${product.name}" eliminado correctamente`);
+  const remove = async (product: Product) => {
+    try {
+      await productService.disableProduct(product.id);
+      toast.success(`"${product.name}" deshabilitado correctamente`);
+      await fetchProducts(); // Recarga la lista desde la BD
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Error al eliminar";
+      toast.error(msg);
+    }
   };
 
-  const save = (draft: ProductDraft, id?: string) => {
-    if (id) {
-      setItems((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, ...draft } : p)),
-      );
-      toast.success("Producto actualizado");
-    } else {
-      const newProduct: Product = {
-        id: `p${Date.now()}`,
-        ...draft,
-        images: draft.images.length ? draft.images : ["/placeholder.svg"],
-      };
-
-      setItems((prev) => [newProduct, ...prev]);
-      toast.success("Producto agregado exitosamente");
+  const save = async (draft: ProductDraft, id?: string) => {
+    try {
+      if (id) {
+        await productService.updateProduct(id, draft);
+        toast.success("Producto actualizado");
+      } else {
+        await productService.createProduct(draft);
+        toast.success("Producto agregado exitosamente");
+      }
+      setFormOpen(false);
+      await fetchProducts(); // Recarga la lista actualizada desde la BD
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Error al guardar";
+      toast.error(msg);
     }
   };
 
@@ -368,13 +413,19 @@ export function AdminPanel() {
         {/* Vistas Dinámicas */}
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, sm: 4 } }}>
           {view === "productos" ? (
-            <ProductsView
-              items={items}
-              totalStock={totalStock}
-              onCreate={openCreate}
-              onEdit={openEdit}
-              onRemove={remove}
-            />
+            loading ? (
+              <Box sx={{ display: "grid", placeItems: "center", py: 10 }}>
+                <CircularProgress size={36} />
+              </Box>
+            ) : (
+              <ProductsView
+                items={items}
+                totalStock={totalStock}
+                onCreate={openCreate}
+                onEdit={openEdit}
+                onRemove={remove}
+              />
+            )
           ) : (
             <OrdersView />
           )}
@@ -628,7 +679,7 @@ function ProductsView({
             </TableHead>
             <TableBody>
               {items.map((p) => (
-                <TableRow key={p.id} hover>
+                <TableRow key={p.id} hover sx={{ opacity: p.isActive === false ? 0.5 : 1 }}>
                   <TableCell>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Box
@@ -651,14 +702,17 @@ function ProductsView({
                           className="object-cover"
                         />
                       </Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        {p.name}
-                      </Typography>
+                      <Box>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {p.name}
+                        </Typography>
+                        {p.isActive === false && (
+                          <Chip label="Deshabilitado" size="small" color="default" sx={{ height: 18, fontSize: "0.65rem" }} />
+                        )}
+                      </Box>
                     </Box>
                   </TableCell>
                   <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>
-                    {/* ─── MEJORA 3: TRADUCCIÓN DE ID DE CATEGORÍA A NOMBRE VISUAL ─── */}
-                    {/* Reemplazamos '{p.category}' directo por la función 'categoryName(p.category)' para que renderice 'Tejidos' en lugar de 'tejidos' */}
                     <Chip
                       label={categoryName(p.category)}
                       variant="outlined"
@@ -668,13 +722,11 @@ function ProductsView({
                   </TableCell>
                   <TableCell>
                     <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                      {/* ─── MEJORA 4: AJUSTE DE FORMATEO ECONÓMICO COP ──────────────── */}
-                      {/* Si la base viene en dólares/euros (e.g. 8.5), lo multiplicamos por un aproximado (e.g. 4200) para pesos, o lo dejas directo si ya es la moneda final */}
                       {new Intl.NumberFormat("es-CO", {
                         style: "currency",
                         currency: "COP",
                         maximumFractionDigits: 0,
-                      }).format(p.price * 4200)}
+                      }).format(p.price)}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ display: { xs: "none", sm: "table-cell" } }}>

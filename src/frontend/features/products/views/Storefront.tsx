@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Box, Typography, Container, Grid } from "@mui/material";
+import { useEffect, useMemo, useState } from "react";
+import { Box, Typography, Container, Grid, CircularProgress } from "@mui/material";
 import { Scissors } from "lucide-react";
 import { type Product } from "../types/types";
 
@@ -15,24 +15,33 @@ import { CartDrawer } from "../../cart/views/CartDrawer";
 
 // ─── MEJORA 1: IMPORTACIÓN DE NUESTROS DATOS SEED QUEMADOS Y HELPERS ───────────────────
 // Traemos el listado con los 8 productos base y el helper para traducir los IDs de las categorías
-import { products as seedProducts, categoryName } from "../lib/products";
+import { categoryName } from "../lib/products";
+import { productService } from "../services/product.service";
 
 export function Storefront() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [selected, setSelected] = useState<Product | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
 
+  // Carga productos activos únicamente desde la BD
+  useEffect(() => {
+    productService
+      .getAllProducts(true)
+      .then(setProducts)
+      .catch((err) => console.error("Error al cargar productos:", err))
+      .finally(() => setLoading(false));
+  }, []);
+
   // Lógica de filtrado en memoria
   const filteredProducts = useMemo(() => {
     const q = query.trim().toLowerCase();
 
-    // ─── MEJORA 2: VINCULACIÓN DEL LISTADO DE PRODUCTOS REALES ─────────────────────────
-    // Reemplazamos el array vacío inicial 'const productsMock: Product[] = [];' por nuestra data semilla
-    const productsMock: Product[] = seedProducts;
-
-    return productsMock.filter((p) => {
+    // ─── CAMBIO: Operamos sobre el estado 'products' cargado mediante API
+    return products.filter((p) => {
       const matchesCategory = category === "all" || p.category === category;
       const matchesQuery =
         !q ||
@@ -40,7 +49,7 @@ export function Storefront() {
         (p.description && p.description.toLowerCase().includes(q));
       return matchesCategory && matchesQuery;
     });
-  }, [query, category]);
+  }, [products, query, category]);
 
   const openProduct = (product: Product) => {
     setSelected(product);
@@ -96,7 +105,11 @@ export function Storefront() {
             </Typography>
           </Box>
 
-          {filteredProducts.length === 0 ? (
+          {loading ? (
+            <Box sx={{ display: "grid", placeItems: "center", py: 10 }}>
+              <CircularProgress size={36} />
+            </Box>
+          ) : filteredProducts.length === 0 ? (
             <Box
               sx={{
                 mt: 5,
@@ -121,7 +134,6 @@ export function Storefront() {
           ) : (
             <Grid container spacing={{ xs: 2, sm: 3 }}>
               {filteredProducts.map((product) => (
-                // MEJORA 4: Aseguramos compatibilidad directa de la Grid clásica v5 con el Layout responsivo
                 <Grid key={product.id} size={{ xs: 6, sm: 4, md: 3 }}>
                   <ProductCard product={product} onOpen={openProduct} />
                 </Grid>

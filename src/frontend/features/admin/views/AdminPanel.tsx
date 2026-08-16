@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -36,8 +37,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "../../../features/auth/context/AuthContext";
-import { type Product } from "../../products/types/types";
-import { ProductFormDialog, type ProductDraft } from "./ProductFormDialog";
+import { ProductDraft, type Product } from "../../products/types/types";
+import { ProductFormDialog } from "./ProductFormDialog";
 import { categoryName } from "../../products/lib/products";
 import { productService } from "../../products/services/product.service";
 
@@ -82,7 +83,19 @@ export function AdminPanel() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
-  const { logout, user } = useAuth();
+  const { logout, user, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/");
+  };
+
+  useEffect(() => {
+    if (!isLoading && (!isAuthenticated || user?.role !== "Administrador")) {
+      router.replace("/");
+    }
+  }, [isAuthenticated, user, isLoading, router]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -90,7 +103,8 @@ export function AdminPanel() {
       const data = await productService.getAllProducts(false);
       setItems(data);
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : "Error al cargar inventario";
+      const msg =
+        error instanceof Error ? error.message : "Error al cargar inventario";
       toast.error(msg);
     } finally {
       setLoading(false);
@@ -108,7 +122,10 @@ export function AdminPanel() {
         }
       } catch (error: unknown) {
         if (isMounted) {
-          const msg = error instanceof Error ? error.message : "Error al cargar inventario";
+          const msg =
+            error instanceof Error
+              ? error.message
+              : "Error al cargar inventario";
           toast.error(msg);
         }
       } finally {
@@ -280,7 +297,7 @@ export function AdminPanel() {
 
         <Box
           component="button"
-          onClick={() => logout()}
+          onClick={handleLogout}
           sx={{
             width: "100%",
             display: "flex",
@@ -303,6 +320,14 @@ export function AdminPanel() {
       </Box>
     </Box>
   );
+
+  if (isLoading || !isAuthenticated) {
+    return (
+      <Box sx={{ display: "grid", placeItems: "center", minHeight: "100vh" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -395,7 +420,7 @@ export function AdminPanel() {
                 variant="text"
                 color="error"
                 size="small"
-                onClick={() => logout()}
+                onClick={handleLogout}
                 startIcon={<LogOut className="w-4 h-4" />}
                 sx={{
                   borderRadius: 2,
@@ -679,7 +704,11 @@ function ProductsView({
             </TableHead>
             <TableBody>
               {items.map((p) => (
-                <TableRow key={p.id} hover sx={{ opacity: p.isActive === false ? 0.5 : 1 }}>
+                <TableRow
+                  key={p.id}
+                  hover
+                  sx={{ opacity: p.isActive === false ? 0.5 : 1 }}
+                >
                   <TableCell>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Box
@@ -707,7 +736,12 @@ function ProductsView({
                           {p.name}
                         </Typography>
                         {p.isActive === false && (
-                          <Chip label="Deshabilitado" size="small" color="default" sx={{ height: 18, fontSize: "0.65rem" }} />
+                          <Chip
+                            label="Deshabilitado"
+                            size="small"
+                            color="default"
+                            sx={{ height: 18, fontSize: "0.65rem" }}
+                          />
                         )}
                       </Box>
                     </Box>

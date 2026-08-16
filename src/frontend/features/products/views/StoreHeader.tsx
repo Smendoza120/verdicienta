@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   AppBar,
   Toolbar,
@@ -15,8 +16,9 @@ import {
   List,
   ListItemButton,
   ListItemText,
+  Divider,
 } from "@mui/material";
-import { LogIn, LogOut, Menu, Scissors, Search, ShoppingBag } from "lucide-react";
+import { LayoutDashboard, LogIn, LogOut, Menu, Scissors, Search, ShoppingBag } from "lucide-react";
 import { useAuth } from "../../auth/context/AuthContext";
 
 const categories = [
@@ -42,6 +44,13 @@ export function StoreHeader({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuth(); // Assuming you have a useAuth hook to get user info and auth status
   const count = 0; // Mock temporal del contador
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    setMobileMenuOpen(false);
+    router.replace("/");
+  };
 
   const SearchField = (
     <Box
@@ -246,9 +255,18 @@ export function StoreHeader({
         open={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
       >
-        <Box sx={{ width: 280, p: 2 }} role="presentation">
+        <Box
+          sx={{
+            width: 280,
+            py: 2,
+            display: "flex",
+            flexDirection: "column",
+            height: "100%",
+          }}
+          role="presentation"
+        >
           <Box
-            sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3, pl: 1 }}
+            sx={{ display: "flex", alignItems: "center", gap: 1, mb: 3, px: 3 }}
           >
             <Box
               sx={{
@@ -268,7 +286,7 @@ export function StoreHeader({
             </Typography>
           </Box>
 
-          <List component="nav" disablePadding>
+          <List component="nav" disablePadding sx={{ px: 2 }}>
             <ListItemButton
               selected={activeCategory === "all"}
               onClick={() => {
@@ -306,6 +324,105 @@ export function StoreHeader({
               </ListItemButton>
             ))}
           </List>
+
+          {/* Bloque Inferior Móvil basado en tu ejemplo */}
+          <Box
+            sx={{
+              mt: "auto",
+              borderTop: "1px solid",
+              borderColor: "divider",
+            }}
+          >
+            {isAuthenticated ? (
+              <>
+                {/* Info del usuario logueado */}
+                {user && (
+                  <Box sx={{ px: 3, pt: 2, pb: 1 }}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: "block", fontWeight: 500 }}
+                    >
+                      {user.role || "Usuario"}
+                    </Typography>
+                    <Typography variant="body2" noWrap sx={{ fontWeight: 600 }}>
+                      {user.name || user.email}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Opción Ir al Panel Admin si aplica */}
+                {user?.role === "Administrador" && (
+                  <Box
+                    component={Link}
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      px: 3,
+                      py: 1.5,
+                      textDecoration: "none",
+                      color: "text.secondary",
+                      "&:hover": { color: "text.primary", bgcolor: "action.hover" },
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    Panel Admin
+                  </Box>
+                )}
+
+                {/* Botón Cerrar Sesión */}
+                <Box
+                  component="button"
+                  onClick={handleLogout}
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    px: 3,
+                    py: 2,
+                    border: "none",
+                    bgcolor: "transparent",
+                    cursor: "pointer",
+                    color: "error.main",
+                    "&:hover": { bgcolor: "action.hover" },
+                    fontSize: "0.875rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar Sesión
+                </Box>
+              </>
+            ) : (
+              /* Botón Iniciar Sesión si NO está autenticado */
+              <Box
+                component={Link}
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                  px: 3,
+                  py: 2,
+                  textDecoration: "none",
+                  color: "primary.main",
+                  "&:hover": { bgcolor: "action.hover" },
+                  fontSize: "0.875rem",
+                  fontWeight: 600,
+                }}
+              >
+                <LogIn className="w-4 h-4" />
+                Iniciar Sesión
+              </Box>
+            )}
+          </Box>
         </Box>
       </Drawer>
     </AppBar>

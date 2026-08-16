@@ -16,30 +16,10 @@ import {
 } from "@mui/material";
 import { ImagePlus, X } from "lucide-react";
 import { categories } from "../../products/lib/products";
-
-export type ProductDraft = {
-  name: string;
-  price: number;
-  category: string;
-  description: string;
-  stock: number;
-  images: string[];
-};
-
-type ProductFormDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  initial: {
-    id: string;
-    name: string;
-    price: number;
-    category: string;
-    description?: string;
-    stock: number;
-    images: string[];
-  } | null;
-  onSave: (draft: ProductDraft, id?: string) => void;
-};
+import {
+  ProductDraft,
+  ProductFormDialogProps,
+} from "../../products/types/product";
 
 const empty: ProductDraft = {
   name: "",
@@ -69,27 +49,47 @@ export function ProductFormDialog({
     }
     return empty;
   });
+
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const onFiles = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    const urls = Array.from(files).map((f) => URL.createObjectURL(f));
-    setDraft((d) => ({ ...d, images: [...d.images, ...urls] }));
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
 
-    if (fileRef.current) {
-      fileRef.current.value = "";
+  const onFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    try {
+      // Convertimos todos los archivos cargados a cadenas Base64
+      const base64Promises = Array.from(files).map((file) =>
+        fileToBase64(file),
+      );
+      const base64Images = await Promise.all(base64Promises);
+
+      setDraft((d) => ({
+        ...d,
+        images: [...d.images, ...base64Images],
+      }));
+    } catch (error) {
+      console.error("Error al procesar las imágenes:", error);
+    } finally {
+      if (fileRef.current) {
+        fileRef.current.value = "";
+      }
     }
   };
 
   const removeImage = (idx: number) => {
-    setDraft((d) => {
-      const target = d.images[idx];
-      if (target?.startsWith("blob:")) {
-        URL.revokeObjectURL(target);
-      }
-      return { ...d, images: d.images.filter((_, i) => i !== idx) };
-    });
-  };
+  setDraft((d) => ({
+    ...d,
+    images: d.images.filter((_, i) => i !== idx),
+  }));
+};
 
   const handleClose = () => {
     onOpenChange(false);
@@ -136,7 +136,7 @@ export function ProductFormDialog({
             flexDirection: "column",
             gap: 2.5,
             maxHeight: "65vh",
-            border: "none", 
+            border: "none",
           }}
         >
           {/* Input: Nombre */}

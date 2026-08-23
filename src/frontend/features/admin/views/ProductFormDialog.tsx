@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   Dialog,
@@ -13,6 +13,7 @@ import {
   Typography,
   IconButton,
   MenuItem,
+  CircularProgress,
 } from "@mui/material";
 import { ImagePlus, X } from "lucide-react";
 import { categories } from "../../products/lib/products";
@@ -20,6 +21,12 @@ import {
   ProductDraft,
   ProductFormDialogProps,
 } from "../../products/types/product";
+
+interface LocalImagePreview {
+  file?: File;
+  previewUrl: string;
+  isExistingUrl: boolean;
+}
 
 const empty: ProductDraft = {
   name: "",
@@ -36,21 +43,59 @@ export function ProductFormDialog({
   initial,
   onSave,
 }: ProductFormDialogProps) {
-  const [draft, setDraft] = useState<ProductDraft>(() => {
-    if (initial) {
-      return {
-        name: initial.name,
-        price: initial.price,
-        category: initial.category,
-        description: initial.description || "",
-        stock: initial.stock,
-        images: [...initial.images],
-      };
-    }
-    return empty;
-  });
-
+  const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [prevInitial, setPrevInitial] = useState(initial);
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  const [draft, setDraft] = useState<ProductDraft>(() =>
+    initial
+      ? {
+          name: initial.name,
+          price: initial.price,
+          category: initial.category,
+          description: initial.description || "",
+          stock: initial.stock,
+          images: [...initial.images],
+        }
+      : empty,
+  );
+
+  const [imagesList, setImagesList] = useState<LocalImagePreview[]>(() =>
+    initial
+      ? initial.images.map((url) => ({
+          previewUrl: url,
+          isExistingUrl: true,
+        }))
+      : [],
+  );
+
+  if (open !== prevOpen || initial !== prevInitial) {
+    setPrevOpen(open);
+    setPrevInitial(initial);
+
+    if (open) {
+      if (initial) {
+        setDraft({
+          name: initial.name,
+          price: initial.price,
+          category: initial.category,
+          description: initial.description || "",
+          stock: initial.stock,
+          images: [...initial.images],
+        });
+        setImagesList(
+          initial.images.map((url) => ({
+            previewUrl: url,
+            isExistingUrl: true,
+          })),
+        );
+      } else {
+        setDraft(empty);
+        setImagesList([]);
+      }
+    }
+  }
 
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -61,44 +106,79 @@ export function ProductFormDialog({
     });
   };
 
-  const onFiles = async (files: FileList | null) => {
+  const onFilesSelected = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    try {
-      // Convertimos todos los archivos cargados a cadenas Base64
-      const base64Promises = Array.from(files).map((file) =>
-        fileToBase64(file),
-      );
-      const base64Images = await Promise.all(base64Promises);
+    const newPreviews: LocalImagePreview[] = Array.from(files).map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+      isExistingUrl: false,
+    }));
 
-      setDraft((d) => ({
-        ...d,
-        images: [...d.images, ...base64Images],
-      }));
-    } catch (error) {
-      console.error("Error al procesar las imágenes:", error);
-    } finally {
-      if (fileRef.current) {
-        fileRef.current.value = "";
-      }
+    setImagesList((prev) => [...prev, ...newPreviews]);
+
+    if (fileRef.current) {
+      fileRef.current.value = "";
     }
   };
 
-  const removeImage = (idx: number) => {
-  setDraft((d) => ({
-    ...d,
-    images: d.images.filter((_, i) => i !== idx),
-  }));
-};
-
-  const handleClose = () => {
-    onOpenChange(false);
+  const removeImage = (index: number) => {
+    setImagesList((prev) => {
+      const itemToRemove = prev[index];
+      if (!itemToRemove.isExistingUrl && itemToRemove.previewUrl) {
+        URL.revokeObjectURL(itemToRemove.previewUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleClose = () => {
+    if (!uploading) {
+      onOpenChange(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(draft, initial?.id);
-    onOpenChange(false);
+    setUploading(true);
+
+    try {
+      const finalImageUrls: string[] = [];
+
+      for (const item of imagesList) {
+        if (item.isExistingUrl) {
+          finalImageUrls.push(item.previewUrl);
+        } else if (item.file) {
+          const base64Image = await fileToBase64(item.file);
+
+          const response = await fetch("/api/upload", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64Image }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.url) {
+            finalImageUrls.push(data.url);
+          } else {
+            throw new Error(data.error || "Error al subir la imagen");
+          }
+        }
+      }
+
+      const updatedDraft: ProductDraft = {
+        ...draft,
+        images: finalImageUrls,
+      };
+
+      await onSave(updatedDraft, initial?.id);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error durante el guardado:", error);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -224,9 +304,9 @@ export function ProductFormDialog({
             </Typography>
 
             <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1.5 }}>
-              {draft.images.map((img, i) => (
+              {imagesList.map((item, i) => (
                 <Box
-                  key={`${img}-${i}`}
+                  key={`${item.previewUrl}-${i}`}
                   sx={{
                     position: "relative",
                     width: 80,
@@ -238,7 +318,7 @@ export function ProductFormDialog({
                   }}
                 >
                   <Image
-                    src={img || "/placeholder.svg"}
+                    src={item.previewUrl || "/placeholder.svg"}
                     alt={`Imagen ${i + 1}`}
                     fill
                     sizes="80px"
@@ -246,6 +326,7 @@ export function ProductFormDialog({
                   />
                   <IconButton
                     size="small"
+                    disabled={uploading}
                     onClick={() => removeImage(i)}
                     aria-label="Quitar imagen"
                     sx={{
@@ -271,6 +352,7 @@ export function ProductFormDialog({
               <Box
                 component="button"
                 type="button"
+                disabled={uploading}
                 onClick={() => fileRef.current?.click()}
                 sx={{
                   display: "grid",
@@ -282,17 +364,21 @@ export function ProductFormDialog({
                   borderColor: "divider",
                   bgcolor: "transparent",
                   color: "text.secondary",
-                  cursor: "pointer",
+                  cursor: uploading ? "not-allowed" : "pointer",
                   transition: "all 0.2s",
                   "&:hover": {
-                    borderColor: "primary.main",
-                    color: "primary.main",
-                    bgcolor: "action.hover",
+                    borderColor: uploading ? "divider" : "primary.main",
+                    color: uploading ? "text.secondary" : "primary.main",
+                    bgcolor: uploading ? "transparent" : "action.hover",
                   },
                 }}
                 aria-label="Cargar imágenes"
               >
-                <ImagePlus className="w-5 h-5" />
+                {uploading ? (
+                  <CircularProgress size={24} />
+                ) : (
+                  <ImagePlus className="w-5 h-5" />
+                )}
               </Box>
 
               <input
@@ -301,7 +387,7 @@ export function ProductFormDialog({
                 accept="image/*"
                 multiple
                 style={{ display: "none" }}
-                onChange={(e) => onFiles(e.target.files)}
+                onChange={(e) => onFilesSelected(e.target.files)}
               />
             </Box>
           </Box>
@@ -320,6 +406,7 @@ export function ProductFormDialog({
           <Button
             type="submit"
             variant="contained"
+            disabled={uploading}
             sx={{
               textTransform: "none",
               borderRadius: 5,

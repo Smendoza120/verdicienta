@@ -5,14 +5,17 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error(
-    "Por favor, define la variable MONGODB_URI dentro del archivo .env"
+    "Por favor, define la variable MONGODB_URI dentro del archivo .env",
   );
 }
 
 let cached = (global as unknown as { mongoose: MongooseGlobal }).mongoose;
 
 if (!cached) {
-  cached = (global as unknown as { mongoose: MongooseGlobal }).mongoose = { conn: null, promise: null };
+  cached = (global as unknown as { mongoose: MongooseGlobal }).mongoose = {
+    conn: null,
+    promise: null,
+  };
 }
 
 export async function connectDB() {
@@ -23,12 +26,15 @@ export async function connectDB() {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      dbName: "verdicienta_db",
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongooseInstance) => {
-      console.log("🚀 Conexión exitosa a MongoDB: verdicienta_db");
-      return mongooseInstance;
-    });
+    cached.promise = mongoose
+      .connect(MONGODB_URI!, opts)
+      .then((mongooseInstance) => {
+        console.log("🚀 Conexión exitosa a MongoDB: verdicienta_db");
+        return mongooseInstance;
+      });
   }
 
   try {

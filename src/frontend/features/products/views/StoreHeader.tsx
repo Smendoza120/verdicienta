@@ -15,8 +15,7 @@ import {
   Badge,
   List,
   ListItemButton,
-  ListItemText,
-  Divider,
+  ListItemText
 } from "@mui/material";
 import { LayoutDashboard, LogIn, LogOut, Menu, Scissors, Search, ShoppingBag } from "lucide-react";
 import { useAuth } from "../../auth/context/AuthContext";
@@ -232,6 +231,7 @@ export function StoreHeader({
             </Button>
           )}
 
+          {/* Este boton se integrara en el futuro */}
           <IconButton
             onClick={onOpenCart}
             aria-label="Abrir carrito"

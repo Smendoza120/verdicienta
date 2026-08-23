@@ -1,84 +1,172 @@
 "use client";
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
-import type { Product } from "../../products/lib/products";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { CartContextType, CartItem, StoredCartItem } from "../types/cart.types";
+import { Product } from "../../products";
+import { Alert, Snackbar } from "@mui/material";
 
-export type CartItem = {
-  product: Product;
-  quantity: number;
-};
+const CART_STORAGE_KEY = "verdicienta_cart_v1";
+const CartContext = createContext<CartContextType | undefined>(undefined);
 
-type CartContextValue = {
-  items: CartItem[];
-  count: number;
-  total: number;
-  addItem: (product: Product, quantity?: number) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
-  clear: () => void;
-};
+export const CartProvider = ({ children }: { children: React.ReactNode }) => {
+  const [notification, setNotification] = useState<{
+    open: boolean;
+    message: string;
+  }>({
+    open: false,
+    message: "",
+  });
 
-const CartContext = createContext<CartContextValue | null>(null);
+  const [items, setItems] = useState<CartItem[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const savedCart = localStorage.getItem(CART_STORAGE_KEY);
+      if (!savedCart) return [];
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
+      const parsed: (CartItem | StoredCartItem)[] = JSON.parse(savedCart);
 
-  const addItem = useCallback((product: Product, quantity = 1) => {
-    setItems((prev) => {
-      const existing = prev.find((i) => i.product.id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === product.id
-            ? { ...i, quantity: i.quantity + quantity }
-            : i,
-        );
+      // Si eran objetos completos antiguos con imágenes pesadas, los migramos/limpiamos
+      return parsed.map((item) => {
+        if ("product" in item && item.product) {
+          // Sanitizamos eliminando arreglos de imágenes pesadas si existen en el storage local
+          return {
+            ...item,
+            product: {
+              ...item.product,
+              images: item.product.images?.slice(0, 1) || [], // Mantiene máximo 1 imagen de portada
+            },
+          };
+        }
+        return item as CartItem;
+      });
+    } catch (error) {
+      console.error("Error al cargar el carrito desde localStorage:", error);
+      return [];
+    }
+  });
+
+  // Guardar cambios en el localStorage
+  useEffect(() => {
+    try {
+      const lightweightItems = items.map((item) => ({
+        quantity: item.quantity,
+        product: {
+          id: item.product.id,
+          name: item.product.name,
+          price: item.product.price,
+          category: item.product.category,
+          stock: item.product.stock,
+          images: item.product.images?.slice(0, 1) || [],
+        },
+      }));
+
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(lightweightItems));
+    } catch (error) {
+      console.error("Error al guardar el carrito en localStorage:", error);
+    }
+  }, [items]);
+
+  // Agregar producto o incrementar cantidad
+  const addToCart = (product: Product, quantity: number = 1) => {
+    setItems((prevItems) => {
+      // Búsqueda limpia utilizando product.id
+      const existingIndex = prevItems.findIndex(
+        (item) => item.product.id === product.id,
+      );
+
+      if (existingIndex > -1) {
+        const updatedItems = [...prevItems];
+        updatedItems[existingIndex].quantity += quantity;
+        return updatedItems;
       }
-      return [...prev, { product, quantity }];
+
+      return [...prevItems, { product, quantity }];
     });
-  }, []);
 
-  const removeItem = useCallback((productId: string) => {
-    setItems((prev) => prev.filter((i) => i.product.id !== productId));
-  }, []);
+    setNotification({
+      open: true,
+      message: `¡${product.name} añadido al carrito!`,
+    });
+  };
 
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
-    setItems((prev) =>
-      quantity <= 0
-        ? prev.filter((i) => i.product.id !== productId)
-        : prev.map((i) =>
-            i.product.id === productId ? { ...i, quantity } : i,
-          ),
+  // Eliminar producto por _id
+  const removeFromCart = (productId: string) => {
+    setItems((prevItems) =>
+      prevItems.filter((item) => item.product.id !== productId),
     );
-  }, []);
+  };
 
-  const clear = useCallback(() => setItems([]), []);
+  // Actualizar cantidad exacta
+  const updateQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      removeFromCart(productId);
+      return;
+    }
 
-  const value = useMemo<CartContextValue>(() => {
-    const count = items.reduce((sum, i) => sum + i.quantity, 0);
-    const total = items.reduce(
-      (sum, i) => sum + i.quantity * i.product.price,
-      0,
+    setItems((prevItems) =>
+      prevItems.map((item) =>
+        item.product.id === productId ? { ...item, quantity } : item,
+      ),
     );
-    return { items, count, total, addItem, removeItem, updateQuantity, clear };
-  }, [items, addItem, removeItem, updateQuantity, clear]);
+  };
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-}
+  // Vaciar carrito
+  const clearCart = () => {
+    setItems([]);
+  };
 
-export function useCart() {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error("useCart must be used within a CartProvider");
-  return ctx;
-}
+  const handleCloseNotification = (
+    _event?: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") return;
+    setNotification((prev) => ({ ...prev, open: false }));
+  };
 
-export const formatPrice = (value: number) =>
-  new Intl.NumberFormat("es-ES", {
-    style: "currency",
-    currency: "EUR",
-  }).format(value);
+  // Cálculos acumulados
+  const count = items.reduce((sum, item) => sum + item.quantity, 0);
+  const total = items.reduce(
+    (sum, item) => sum + item.product.price * item.quantity,
+    0,
+  );
+
+  return (
+    <CartContext.Provider
+      value={{
+        items,
+        count,
+        total,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+      }}
+    >
+      {children}
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={2500}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity="success"
+          variant="filled"
+          sx={{ width: "100%", borderRadius: 2, fontWeight: 500 }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
+    </CartContext.Provider>
+  );
+};
+
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart debe usarse dentro de un CartProvider");
+  }
+  return context;
+};

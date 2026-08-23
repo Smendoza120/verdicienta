@@ -6,6 +6,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { theme } from "../frontend/theme/theme";
 import { AuthProvider } from "../frontend/features/auth/context/AuthContext";
 import "./globals.css";
+import { CartProvider } from "../frontend/features/cart/context/CartContext";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({
@@ -43,8 +44,10 @@ export default function RootLayout({
         <AppRouterCacheProvider>
           <ThemeProvider theme={theme}>
             <AuthProvider>
-              <CssBaseline />
-              {children}
+              <CartProvider>
+                <CssBaseline />
+                {children}
+              </CartProvider>
             </AuthProvider>
           </ThemeProvider>
         </AppRouterCacheProvider>

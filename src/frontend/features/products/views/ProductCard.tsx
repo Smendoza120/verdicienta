@@ -3,15 +3,19 @@
 import Image from 'next/image';
 import { Card, Box, Typography, IconButton, Chip } from '@mui/material';
 import { Plus } from 'lucide-react';
-import { type Product } from '../types/types';
+import { useCart } from '../../cart/context/CartContext';
+import { ProductCardProps } from '../types/product';
 
-type ProductCardProps = {
-  product: Product;
-  onOpen: (product: Product) => void;
-};
 
 export function ProductCard({ product, onOpen }: ProductCardProps) {
+  const { addToCart } = useCart();
+  
   const outOfStock = product.stock === 0;
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation(); 
+    addToCart(product, 1);
+  };
 
   return (
     <Card 
@@ -82,6 +86,7 @@ export function ProductCard({ product, onOpen }: ProductCardProps) {
           <IconButton 
             disabled={outOfStock}
             color="primary"
+            onClick={handleAddToCart}
             sx={{ bgcolor: 'primary.main', color: '#fff', '&:hover': { bgcolor: 'primary.dark' }, p: 1 }}
             aria-label="Añadir al carrito"
           >

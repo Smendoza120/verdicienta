@@ -1,3 +1,5 @@
+import { Product } from "./types";
+
 export type ProductDraft = {
   name: string;
   price: number;
@@ -21,3 +23,9 @@ export type ProductFormDialogProps = {
   } | null;
   onSave: (draft: ProductDraft, id?: string) => void;
 };
+
+export type ProductCardProps = {
+  product: Product;
+  onOpen: (product: Product) => void;
+};
+

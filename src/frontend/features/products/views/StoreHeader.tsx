@@ -15,10 +15,19 @@ import {
   Badge,
   List,
   ListItemButton,
-  ListItemText
+  ListItemText,
 } from "@mui/material";
-import { LayoutDashboard, LogIn, LogOut, Menu, Scissors, Search, ShoppingBag } from "lucide-react";
+import {
+  LayoutDashboard,
+  LogIn,
+  LogOut,
+  Menu,
+  Scissors,
+  Search,
+  ShoppingBag,
+} from "lucide-react";
 import { useAuth } from "../../auth/context/AuthContext";
+import NextImage from "next/image";
 
 const categories = [
   { id: "lanas", name: "Lanas y Hilados" },
@@ -137,29 +146,34 @@ export function StoreHeader({
           sx={{
             display: "flex",
             alignItems: "center",
-            gap: 1,
+            gap: 1.5,
             textDecoration: "none",
             color: "text.primary",
           }}
         >
           <Box
             sx={{
-              display: "grid",
-              width: 36,
-              height: 36,
-              placeItems: "center",
-              borderRadius: 2,
-              bgcolor: "primary.main",
-              color: "primary.contrastText",
+              position: "relative",
+              width: 40,
+              height: 40,
+              overflow: "hidden",
             }}
           >
-            <Scissors className="w-5 h-5" />
+            {/* <Scissors className="w-5 h-5" /> */}
+            <NextImage
+              src="/Verdicienta-logo.png" 
+              alt="Logo Verdicienta"
+              fill
+              sizes="36px"
+              style={{ objectFit: "cover" }}
+              priority
+            />
           </Box>
           <Typography
             variant="h6"
             sx={{
               fontWeight: "bold",
-              tracking: -0.5,
+              letterSpacing: -0.5,
               display: { xs: "none", sm: "block" },
             }}
           >
@@ -231,7 +245,6 @@ export function StoreHeader({
             </Button>
           )}
 
-          {/* Este boton se integrara en el futuro */}
           <IconButton
             onClick={onOpenCart}
             aria-label="Abrir carrito"
@@ -270,16 +283,22 @@ export function StoreHeader({
           >
             <Box
               sx={{
-                display: "grid",
-                width: 32,
-                height: 32,
+                position: "relative",
+                width: 40,
+                height: 40,
                 placeItems: "center",
                 borderRadius: 2,
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
+                overflow: "hidden",
               }}
             >
-              <Scissors className="w-4 h-4" />
+              {/* <Scissors className="w-4 h-4" /> */}
+              <NextImage
+                src="/Verdicienta-logo.png"
+                alt="Logo Verdicienta"
+                fill
+                sizes="30px"
+                style={{ objectFit: "contain" }}
+              />
             </Box>
             <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
               Verdicienta
@@ -365,7 +384,10 @@ export function StoreHeader({
                       py: 1.5,
                       textDecoration: "none",
                       color: "text.secondary",
-                      "&:hover": { color: "text.primary", bgcolor: "action.hover" },
+                      "&:hover": {
+                        color: "text.primary",
+                        bgcolor: "action.hover",
+                      },
                       fontSize: "0.875rem",
                       fontWeight: 500,
                     }}

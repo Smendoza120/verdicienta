@@ -23,6 +23,9 @@ export const metadata: Metadata = {
   title: "Verdicienta — Tienda de Bolsos y Accesorios",
   description:
     "Exclusividad en bolsos, aretes y estuches para libros hechos a mano.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export const viewport: Viewport = {

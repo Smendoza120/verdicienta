@@ -22,7 +22,6 @@ import {
   LogIn,
   LogOut,
   Menu,
-  Scissors,
   Search,
   ShoppingBag,
 } from "lucide-react";

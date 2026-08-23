@@ -31,7 +31,6 @@ import {
   Package,
   Pencil,
   Plus,
-  Scissors,
   ShoppingCart,
   Trash2,
 } from "lucide-react";
@@ -41,6 +40,7 @@ import { ProductDraft, type Product } from "../../products/types/types";
 import { ProductFormDialog } from "./ProductFormDialog";
 import { categoryName } from "../../products/lib/products";
 import { productService } from "../../products/services/product.service";
+import NextImage from "next/image";
 
 const orders = [
   {
@@ -208,16 +208,22 @@ export function AdminPanel() {
       >
         <Box
           sx={{
-            display: "grid",
-            width: 32,
-            height: 32,
+            position: "relative",
+            width: 40,
+            height: 40,
             placeItems: "center",
-            borderRadius: 1.5,
-            bgcolor: "primary.main",
-            color: "primary.contrastText",
+            borderRadius: 0,
           }}
         >
-          <Scissors className="w-4 h-4" />
+          {/* <Scissors className="w-4 h-4" /> */}
+          <NextImage
+            src="/Verdicienta-logo.png"
+            alt="Logo Verdicienta Admin"
+            fill
+            sizes="32px"
+            style={{ objectFit: "cover" }}
+            priority
+          />
         </Box>
         <Typography
           variant="subtitle1"

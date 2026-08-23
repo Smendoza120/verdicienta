@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Box, Typography, Container, Grid, CircularProgress } from "@mui/material";
-import { Scissors } from "lucide-react";
+import {
+  Box,
+  Typography,
+  Container,
+  Grid,
+  CircularProgress,
+} from "@mui/material";
 import { type Product } from "../types/types";
+import NextImage from "next/image";
 
 // Importación de componentes locales unificados
 import { StoreHeader } from "./StoreHeader";
@@ -174,24 +180,33 @@ export function Storefront() {
           >
             <Box
               sx={{
-                display: "grid",
+                position: "relative",
                 width: 28,
                 height: 28,
                 placeItems: "center",
-                borderRadius: 1,
-                bgcolor: "primary.main",
-                color: "primary.contrastText",
+                borderRadius: 0,
+                // bgcolor: "primary.main",
+                // color: "primary.contrastText",
               }}
             >
-              <Scissors className="w-4 h-4" />
+              {/* <Scissors className="w-4 h-4" /> */}
+              <NextImage
+                src="/Verdicienta-logo.png"
+                alt="Logo Verdicienta"
+                fill
+                sizes="28px"
+                style={{ objectFit: "cover" }}
+              />
             </Box>
             <Typography variant="subtitle2" sx={{ fontWeight: "bold" }}>
               Verdicienta
             </Typography>
           </Box>
+
           <Typography variant="caption" color="text.secondary">
             Tu tienda de manualidades hecha con cariño.
           </Typography>
+
           <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
             © {new Date().getFullYear()} Verdicienta. Todos los derechos
             reservados.
